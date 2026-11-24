@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Design and Simulation of an 8-Bit ALU</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    :root {
+      --g-blue: #1A73E8;
+      --g-red: #EA4335;
+      --g-yellow: #FBBC04;
+      --g-green: #34A853;
+      --g-purple: #9334E6;
+      --g-bg: #F8F9FA;
+      --g-text: #202124;
+    }
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      background-color: var(--g-bg);
+      color: var(--g-text);
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    code, .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Tactile Neo-Brutalist Style */
+    .btn-tactile {
+      border: 2px solid #000;
+      box-shadow: 2px 2px 0px #000;
+      transition: all 0.1s ease;
+      cursor: pointer;
+    }
+    .btn-tactile:hover { background-color: #F1F3F4; }
+    .btn-tactile:active {
+      transform: translate(1px, 1px);
+      box-shadow: 1px 1px 0px #000;
+    }
+
+    .card-tactile {
+      background: #FFFFFF;
+      border: 2px solid #000;
+      box-shadow: 3px 3px 0px #000;
+      border-radius: 12px;
+    }
+
+    /* Wire animation */
+    @keyframes wireDash {
+      to { stroke-dashoffset: -20; }
+    }
+    .wire-active {
+      stroke-dasharray: 6, 4;
+      animation: wireDash 0.8s linear infinite;
+    }
+
+    /* Container */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 16px;
+      width: 100%;
+    }
+
+    /* Header */
+    header {
+      background: #FFFFFF;
+      border-bottom: 2px solid #000;
+      padding: 12px 20px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .header-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .logo-badge {
+      width: 36px;
+      height: 36px;
+      border: 2px solid #000;
+      box-shadow: 2px 2px 0px #000;
+      border-radius: 8px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3px;
+      padding: 5px;
+      background: #fff;
+    }
+    .dot-b { background: var(--g-blue); border-radius: 50%; }
+    .dot-r { background: var(--g-red); border-radius: 50%; }
+    .dot-y { background: var(--g-yellow); border-radius: 50%; }
+    .dot-g { background: var(--g-green); border-radius: 50%; }
+
+    /* Grids */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    @media (max-width: 768px) {
+      .grid-2 { grid-template-columns: 1fr; }
+      .grid-4 { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .op-card {
+      padding: 12px;
+      border-radius: 8px;
+      border: 2px solid #000;
+      cursor: pointer;
+      text-align: left;
+      background: #fff;
+      transition: all 0.15s ease;
+    }
+    .op-card.active {
+      box-shadow: 3px 3px 0px #000;
+      transform: translate(-1px, -1px);
+    }
+
+    .bit-btn {
+      min-height: 42px;
+      border: 2px solid #000;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all 0.1s;
+    }
+    .bit-btn:active { transform: scale(0.95); }
+    .bit-btn.active-blue {
+      background: var(--g-blue);
+      color: #fff;
+      box-shadow: 2px 2px 0px #000;
+    }
+    .bit-btn.active-red {
+      background: var(--g-red);
+      color: #fff;
+      box-shadow: 2px 2px 0px #000;
+    }
+    .bit-btn.inactive {
+      background: #F8F9FA;
+      color: #3C4043;
+      box-shadow: 1px 1px 0px #000;
+    }
+
+    /* Mode Toggle */
+    .mode-toggle {
+      display: inline-flex;
+      border: 2px solid #000;
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: 2px 2px 0px #000;
+    }
+    .mode-toggle button {
+      border: none;
+      padding: 4px 14px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      background: #fff;
+      color: #3C4043;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    .mode-toggle button.active-mode {
+      background: var(--g-blue);
+      color: #fff;
+    }
+    .mode-toggle button + button { border-left: 2px solid #000; }
+
+    /* Tabs */
+    .tab-row {
+      display: flex;
+      gap: 0;
+      border: 2px solid #000;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 2px 2px 0px #000;
+      width: fit-content;
+      margin-bottom: 16px;
+    }
+    .tab-btn {
+      padding: 8px 22px;
+      border: none;
+      background: #fff;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      text-transform: uppercase;
+      color: #3C4043;
+    }
+    .tab-btn + .tab-btn { border-left: 2px solid #000; }
+    .tab-btn.active { background: var(--g-blue); color: #fff; }
+    .tab-btn:hover:not(.active) { background: #F1F3F4; }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header -->
+  <header>
+    <div class="header-content">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div class="logo-badge">
+          <div class="dot-b"></div>
+          <div class="dot-r"></div>
+          <div class="dot-y"></div>
+          <div class="dot-g"></div>
+        </div>
+        <div>
+          <h1 style="font-size: 16px; font-weight: 800; letter-spacing: -0.3px;">Design and Simulation of an 8-Bit ALU</h1>
+          <p style="font-size: 11px; color: #5F6368; font-weight: 600;">Standalone Hardware Logic Simulator (No Server Needed)</p>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <div class="mode-toggle">
+          <button class="active-mode" id="modeUnsigned" onclick="setMode(false)">Unsigned</button>
+          <button id="modeSigned" onclick="setMode(true)">Signed</button>
+        </div>
+        <button onclick="resetDefaults()" class="btn-tactile" style="padding: 6px 14px; font-size: 12px; font-weight: 700; background: #fff; border-radius: 6px;">
+          Reset Circuit
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="container" style="flex: 1; display: flex; flex-direction: column; gap: 20px;">
+
+    <!-- Tabs -->
+    <div class="tab-row">
+      <button class="tab-btn active" onclick="switchTab('sim')">Simulator</button>
+      <button class="tab-btn" onclick="switchTab('diagram')">Original Diagram</button>
+      <button class="tab-btn" onclick="switchTab('ref')">Reference</button>
+    </div>
+
+    <!-- ═══════ SIMULATOR TAB ═══════ -->
+    <div id="tab-sim" class="tab-pane active" style="display: flex; flex-direction: column; gap: 16px;">
+
+      <!-- 1. Schematic Card -->
+      <div class="card-tactile" style="overflow: hidden;">
+        <div style="background: #F8F9FA; padding: 10px 16px; border-bottom: 2px solid #000; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700;">
+            <span id="headerOpDot" style="width: 10px; height: 10px; border-radius: 50%; border: 1px solid #000; background: var(--g-blue);"></span>
+            <span>Logisim Circuit Model</span>
+            <span style="color: #9AA0A6;">|</span>
+            <span style="font-family: 'JetBrains Mono', monospace;" id="headerRoutingText">Routing: ADD (00₂)</span>
+          </div>
+          <div style="font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 700; background: #E8F0FE; color: #1A73E8; padding: 3px 8px; border-radius: 4px; border: 1px solid #000;">
+            LIVE COMBINATIONAL SIMULATION
+          </div>
+        </div>
+
+        <!-- SVG Canvas -->
+        <div style="background: #FCFDFE; padding: 16px; overflow-x: auto; display: flex; justify-content: center;">
+          <svg id="aluSvg" viewBox="0 0 1100 780" style="width: 100%; max-width: 1100px; height: auto; display: block; user-select: none;">
+
+            <!-- Input A Pin Block -->
+            <g transform="translate(20, 60)">
+              <rect x="0" y="0" width="180" height="52" rx="5" fill="#FFFFFF" stroke="#000000" stroke-width="2.5" style="filter: drop-shadow(2px 2px 0px #000);" />
+              <text x="10" y="19" font-family="'Plus Jakarta Sans'" font-weight="800" font-size="15" fill="#000">A</text>
+              <rect x="28" y="4" width="28" height="16" rx="2.5" fill="#F1F3F4" stroke="#000" stroke-width="1.2" />
+              <text x="34" y="16" font-family="'JetBrains Mono'" font-weight="700" font-size="10" fill="#1A73E8">x8</text>
+              <text x="62" y="16" font-family="'JetBrains Mono'" font-weight="700" font-size="11" fill="#1A73E8" id="svgValAText">=0</text>
+
+              <!-- 8 Bit Switches inside Pin A -->
+              <g transform="translate(6, 26)">
+                <g onclick="toggleBit('A', 7)" style="cursor: pointer;"><rect id="svgA7" x="0" y="0" width="19" height="16" rx="2" fill="#F1F3F4" stroke="#000" stroke-width="1.2" /><text id="svgA7t" x="9.5" y="12" text-anchor="middle" font-family="'JetBrains Mono'" font-size="10" font-weight="700" fill="#000">0</text></g>
+                <g onclick="toggleBit('A', 6)" style="cursor: pointer;"><rect id="svgA6" x="22" y="0" width="19" height="16" rx="2" fill="#F1F3F4" stroke="#000" stroke-width="1.2" /><text id="svgA6t" x="31.5" y="12" text-anchor="middle" font-family="'JetBrains Mono'" font-size="10" font-weight="700" fill="#000">0</text></g>
+                <g onclick="toggleBit('A', 5)" style="cursor: pointer;"><rect id="svgA5" x="44" y="0" width="19" height="16" rx="2" fill="#F1F3F4" stroke="#000" stroke-width="1.2" /><text id="svgA5t" x="53.5" y="12" text-anchor="middle" font-family="'JetBrains Mono'" font-size="10" font-weight="700" fill="#000">0</text></g>
+                <g onclick="toggleBit('A', 4)" style="cursor: pointer;"><rect id="svgA4" x="66" y="0" width="19" height="16" rx="2" fill="#F1F3F4" stroke="#000" stroke-width="1.2" /><text id="svgA4t" x="75.5" y="12" text-anchor="middle" font-family="'JetBrains Mono'" font-size="10" font-weight="700" fill="#000">0</text></g>
+                <g onclick="toggleBit('A', 3)" style="cursor: pointer;"><rect id="svgA3" x="88" y="0" width="19" height="16" rx="2" fill="#F1F3F4" stroke="#000" stroke-width="1.2" /><text id="svgA3t" x="97.5" y="12" text-anchor="middle" font-family="'JetBrains Mono'" font-size="10" font-weight="700" fill="#000">0</text></g>
+                <g onclick="toggleBit('A', 2)" style="cursor: pointer;"><rect id="svgA2" x="110" y="0" width="19" height="16" rx="2" fill="#F1F3F4" stroke="#000" stroke-width="1.2" /><text id="svgA2t" x="119.5" y="12" text-anchor="middle" font-family="'JetBrains Mono'" font-size="10" font-weight="700" fill="#000">0</text></g>
+                <g onclick="toggleBit('A', 1)" style="cursor: pointer;"><rect id="svgA1" x="132" y="0" width="19" height="16" rx="2" fill="#F1F3F4" stroke="#000" stroke-width="1.2" /><text id="svgA1t" x="141.5" y="12" text-anchor="middle" font-family="'JetBrains Mono'" font-size="10" font-weight="700" fill="#000">0</text></g>
+                <g onclick="toggleBit('A', 0)" style="cursor: pointer;"><rect id="svgA0" x="154" y="0" width="19" height="16" rx="2" fill="#F1F3F4" stroke="#000" stroke-width="1.2" /><text id="svgA0t" x="163.5" y="12" text-anchor="middle" font-family="'JetBrains Mono'" font-size="10" font-weight="700" fill="#000">0</text></g>
+              </g>
+              <circle cx="180" cy="26" r="3.5" fill="#000" />
+            </g>
+
+            <!-- Input B Pin Block -->
+            <g transform="translate(20, 132)">
+              <rect x="0" y="0" width="180" height="52" rx="5" fill="#FFFFFF" stroke="#000000" stroke-width="2.5" style="filter: drop-shadow(2px 2px 0px #000);" />
+              <text x="10" y="19" font-family="'Plus Jakarta Sans'" font-weight="800" font-size="15" fill="#000">B</text>
+              <rect x="28" y="4" width="28" height="16" rx="2.5" fill="#F1F3F4" stroke="#000" stroke-width="1.2" />
+              <text x="34" y="16" font-family="'JetBrains Mono'" font-weight="700" font-size="10" fill="#EA4335">x8</text>
+              <text x="62" y="16" font-family="'JetBrains Mono'" font-weight="700" font-size="11" fill="#EA4335" id="svgValBText">=0</text>
+
+              <g transform="translate(6, 26)">
+                <g onclick="toggleBit('B', 7)" style="cursor: pointer;"><rect id="svgB7" x="0" y="0" width="19" height="16" rx="2" fill="#F1F3F4" stroke="#000" stroke-width="1.2" /><text id="svgB7t" x="9.5" y="12" text-anchor="middle" font-family="'JetBrains Mono'" font-size="10" font-weight="700" fill="#000">0</text></g>
+                <g onclick="toggleBit('B', 6)" style="cursor: pointer;"><rect id="svgB6" x="22" y="0" width="19" height="16" rx="2" fill="#F1F3F4" stroke="#000" stroke-width="1.2" /><text id="svgB6t" x="31.5" y="12" text-anchor="middle" font-family="'JetBrains Mono'" font-size="10" font-weight="700" fill="#000">0</text></g>
+                <g onclick="toggleBit('B', 5)" style="cursor: pointer;"><rect id="svgB5" x="44" y="0" width="19" height="16" rx="2" fill="#F1F3F4" stroke="#000" stroke-width="1.2" /><text id="svgB5t" x="53.5" y="12" text-anchor="middle" font-family="'JetBrains Mono'" font-size="10" font-weight="700" fill="#000">0</text></g>
+                <g onclick="toggleBit('B', 4)" style="cursor: pointer;"><rect id="svgB4" x="66" y="0" width="19" height="16" rx="2" fill="#F1F3F4" stroke="#000" stroke-width="1.2" /><text id="svgB4t" x="75.5" y="12" text-anchor="middle" font-family="'JetBrains Mono'" font-size="10" font-weight="700" fill="#000">0</text></g>
+                <g onclick="toggleBit('B', 3)" style="cursor: pointer;"><rect id="svgB3" x="88" y="0" width="19" height="16" rx="2" fill="#F1F3F4" stroke="#000" stroke-width="1.2" /><text id="svgB3t" x="97.5" y="12" text-anchor="middle" font-family="'JetBrains Mono'" font-size="10" font-weight="700" fill="#000">0</text></g>
+                <g onclick="toggleBit('B', 2)" style="cursor: pointer;"><rect id="svgB2" x="110" y="0" width="19" height="16" rx="2" fill="#F1F3F4" stroke="#000" stroke-width="1.2" /><text id="svgB2t" x="119.5" y="12" text-anchor="middle" font-family="'JetBrains Mono'" font-size="10" font-weight="700" fill="#000">0</text></g>
+                <g onclick="toggleBit('B', 1)" style="cursor: pointer;"><rect id="svgB1" x="132" y="0" width="19" height="16" rx="2" fill="#F1F3F4" stroke="#000" stroke-width="1.2" /><text id="svgB1t" x="141.5" y="12" text-anchor="middle" font-family="'JetBrains Mono'" font-size="10" font-weight="700" fill="#000">0</text></g>
+                <g onclick="toggleBit('B', 0)" style="cursor: pointer;"><rect id="svgB0" x="154" y="0" width="19" height="16" rx="2" fill="#F1F3F4" stroke="#000" stroke-width="1.2" /><text id="svgB0t" x="163.5" y="12" text-anchor="middle" font-family="'JetBrains Mono'" font-size="10" font-weight="700" fill="#000">0</text></g>
+              </g>
+              <circle cx="180" cy="26" r="3.5" fill="#000" />
+            </g>
+
+            <!-- Main Bus Lines -->
+            <path d="M 198 86 L 380 86" stroke="#000" stroke-width="3.5" stroke-linecap="round" fill="none" />
+            <path d="M 198 158 L 220 158 L 220 110 L 380 110" stroke="#000" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+
+            <!-- Junction Dots on Bus A -->
+            <circle cx="250" cy="86" r="4.5" fill="#000" />
+            <circle cx="300" cy="86" r="4.5" fill="#000" />
+            <circle cx="350" cy="86" r="4.5" fill="#000" />
+            <!-- Junction Dots on Bus B -->
+            <circle cx="260" cy="110" r="4.5" fill="#000" />
+            <circle cx="310" cy="110" r="4.5" fill="#000" />
+            <circle cx="360" cy="110" r="4.5" fill="#000" />
+
+            <!-- Drop wires: A&B to Subtractor -->
+            <path d="M 250 86 L 250 300 L 395 300" stroke="#000" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+            <path d="M 260 110 L 260 325 L 395 325" stroke="#000" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+            <!-- Drop wires: A&B to Multiplier -->
+            <path d="M 300 86 L 300 480 L 395 480" stroke="#000" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+            <path d="M 310 110 L 310 505 L 395 505" stroke="#000" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+            <!-- Drop wires: A&B to Divider -->
+            <path d="M 350 86 L 350 640 L 395 640" stroke="#000" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+            <path d="M 360 110 L 360 665 L 395 665" stroke="#000" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+
+            <!-- 1. ADDER BLOCK (+) -->
+            <g transform="translate(378, 70)">
+              <rect id="adderBox" x="0" y="0" width="56" height="58" rx="4" fill="#E8F0FE" stroke="#000" stroke-width="2.5" />
+              <text x="8" y="17" font-family="'JetBrains Mono'" font-size="9" font-weight="600" fill="#3C4043">c in</text>
+              <text x="28" y="38" font-family="'Plus Jakarta Sans'" font-size="26" font-weight="800" text-anchor="middle" fill="#1A73E8">+</text>
+              <text x="8" y="52" font-family="'JetBrains Mono'" font-size="9" font-weight="600" fill="#3C4043">c out</text>
+            </g>
+
+            <!-- Carry In Wire (c in = 0) -->
+            <path d="M 406 70 L 406 38 L 370 38" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+            <text x="356" y="42" font-family="'JetBrains Mono'" font-size="14" font-weight="700" fill="#000">0</text>
+
+            <!-- Carry Out Wire & Probe (cout) -->
+            <path d="M 406 128 L 406 190" stroke="#000" stroke-width="2.5" stroke-linecap="round" fill="none" />
+            <g transform="translate(390, 190)">
+              <circle id="coutProbeCircle" cx="16" cy="16" r="16" fill="#fff" stroke="#000" stroke-width="2.5" style="filter: drop-shadow(2px 2px 0px #000);" />
+              <text id="coutProbeVal" x="16" y="21" text-anchor="middle" font-family="'JetBrains Mono'" font-size="13" font-weight="700" fill="#000">0</text>
+              <text x="40" y="21" font-family="'Plus Jakarta Sans'" font-size="13" font-weight="700" fill="#000">Cout</text>
+              <g id="coutBadgeGroup" transform="translate(78, 6)" style="display: none;">
+                <rect x="0" y="0" width="50" height="18" rx="3" fill="#FEF7E0" stroke="#000" stroke-width="1" />
+                <text x="6" y="13" font-family="'JetBrains Mono'" font-size="10" font-weight="700" fill="#B06000">CARRY</text>
+              </g>
+            </g>
+
+            <!-- Adder Out Wire to MUX Pin 0 -->
+            <path id="wireAdd" d="M 434 99 L 650 99 L 650 345 L 760 345" stroke="#1A73E8" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none" class="wire-active" />
+            <g transform="translate(454, 80)">
+              <rect x="0" y="0" width="90" height="18" rx="3" fill="#fff" stroke="#000" stroke-width="1" />
+              <text id="adderOutTag" x="6" y="13" font-family="'JetBrains Mono'" font-size="10" font-weight="600" fill="#1A73E8">00000000 (0)</text>
+            </g>
+
+            <!-- 2. SUBTRACTOR BLOCK (−) -->
+            <g transform="translate(393, 285)">
+              <rect id="subBox" x="0" y="0" width="56" height="58" rx="4" fill="#FFFFFF" stroke="#000" stroke-width="2.5" />
+              <text x="8" y="17" font-family="'JetBrains Mono'" font-size="9" font-weight="600" fill="#3C4043">b in</text>
+              <text x="28" y="38" font-family="'Plus Jakarta Sans'" font-size="28" font-weight="800" text-anchor="middle" fill="#F9AB00">−</text>
+              <text x="8" y="52" font-family="'JetBrains Mono'" font-size="9" font-weight="600" fill="#3C4043">b out</text>
+            </g>
+            <!-- Borrow In Wire (b in = 0) -->
+            <path d="M 421 285 L 421 255 L 468 255" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+            <text x="474" y="260" font-family="'JetBrains Mono'" font-size="14" font-weight="700" fill="#000">0</text>
+            <!-- Borrow Out Wire & Probe -->
+            <path d="M 421 343 L 421 408" stroke="#000" stroke-width="2.5" stroke-linecap="round" fill="none" />
+            <g transform="translate(405, 408)">
+              <circle id="borrowProbeCircle" cx="16" cy="16" r="16" fill="#fff" stroke="#000" stroke-width="2.5" style="filter: drop-shadow(2px 2px 0px #000);" />
+              <text id="borrowProbeVal" x="16" y="21" text-anchor="middle" font-family="'JetBrains Mono'" font-size="13" font-weight="700" fill="#000">0</text>
+              <text x="16" y="48" text-anchor="middle" font-family="'Plus Jakarta Sans'" font-size="13" font-weight="700" fill="#000">borrowout</text>
+              <g id="borrowBadgeGroup" transform="translate(-12, 54)" style="display: none;">
+                <rect x="0" y="0" width="58" height="18" rx="3" fill="#FEF7E0" stroke="#000" stroke-width="1" />
+                <text x="5" y="13" font-family="'JetBrains Mono'" font-size="9" font-weight="700" fill="#B06000">BORROW</text>
+              </g>
+            </g>
+            <!-- Sub Out Wire to MUX Pin 1 -->
+            <path id="wireSub" d="M 449 314 L 580 314 L 580 365 L 760 365" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+            <g transform="translate(460, 294)">
+              <rect x="0" y="0" width="90" height="18" rx="3" fill="#fff" stroke="#000" stroke-width="1" />
+              <text id="subOutTag" x="6" y="13" font-family="'JetBrains Mono'" font-size="10" font-weight="600" fill="#F9AB00">00000000 (0)</text>
+            </g>
+
+            <!-- 3. MULTIPLIER BLOCK (×) -->
+            <g transform="translate(393, 465)">
+              <rect id="mulBox" x="0" y="0" width="56" height="58" rx="4" fill="#FFFFFF" stroke="#000" stroke-width="2.5" />
+              <text x="8" y="17" font-family="'JetBrains Mono'" font-size="9" font-weight="600" fill="#3C4043">c in</text>
+              <text x="28" y="38" font-family="'Plus Jakarta Sans'" font-size="24" font-weight="800" text-anchor="middle" fill="#34A853">×</text>
+              <text x="8" y="52" font-family="'JetBrains Mono'" font-size="9" font-weight="600" fill="#3C4043">c out</text>
+            </g>
+            <!-- Mul Out Wire to MUX Pin 2 -->
+            <path id="wireMul" d="M 449 494 L 610 494 L 610 385 L 760 385" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+            <g transform="translate(460, 476)">
+              <rect x="0" y="0" width="90" height="18" rx="3" fill="#fff" stroke="#000" stroke-width="1" />
+              <text id="mulOutTag" x="6" y="13" font-family="'JetBrains Mono'" font-size="10" font-weight="600" fill="#34A853">00000000 (0)</text>
+            </g>
+
+            <!-- 4. DIVIDER BLOCK (÷) -->
+            <g transform="translate(393, 625)">
+              <rect id="divBox" x="0" y="0" width="56" height="58" rx="4" fill="#FFFFFF" stroke="#000" stroke-width="2.5" />
+              <text x="8" y="17" font-family="'JetBrains Mono'" font-size="9" font-weight="600" fill="#3C4043">upper</text>
+              <text x="28" y="38" font-family="'Plus Jakarta Sans'" font-size="24" font-weight="800" text-anchor="middle" fill="#9334E6">÷</text>
+              <text x="8" y="52" font-family="'JetBrains Mono'" font-size="9" font-weight="600" fill="#3C4043">lower</text>
+            </g>
+            <!-- Div Out Wire to MUX Pin 3 -->
+            <path id="wireDiv" d="M 449 654 L 640 654 L 640 405 L 760 405" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+            <g transform="translate(460, 636)">
+              <rect x="0" y="0" width="90" height="18" rx="3" fill="#fff" stroke="#000" stroke-width="1" />
+              <text id="divOutTag" x="6" y="13" font-family="'JetBrains Mono'" font-size="10" font-weight="600" fill="#9334E6">00000000 (0)</text>
+            </g>
+            <!-- Remainder Output -->
+            <path d="M 421 683 L 421 740" stroke="#000" stroke-width="2.5" stroke-linecap="round" fill="none" />
+            <g transform="translate(370, 740)">
+              <rect x="0" y="0" width="104" height="30" rx="5" fill="#FFFFFF" stroke="#000" stroke-width="2" style="filter: drop-shadow(2px 2px 0px #000);" />
+              <text id="svgRem" x="52" y="20" text-anchor="middle" font-family="'JetBrains Mono'" font-size="11" font-weight="700" fill="#000">00000000</text>
+            </g>
+            <text x="422" y="785" text-anchor="middle" font-family="'Plus Jakarta Sans'" font-size="13" font-weight="700" fill="#9334E6">Remainder</text>
+
+            <!-- 5. 4:1 MULTIPLEXER (MUX) -->
+            <g transform="translate(760, 322)">
+              <polygon points="0,14 50,32 50,76 0,94" fill="#FFFFFF" stroke="#000" stroke-width="2.5" stroke-linejoin="round" style="filter: drop-shadow(3px 3px 0px #000);" />
+              <text x="7" y="30" font-family="'JetBrains Mono'" font-size="10" font-weight="700" fill="#1A73E8">0</text>
+              <text x="7" y="48" font-family="'JetBrains Mono'" font-size="10" font-weight="700" fill="#F9AB00">1</text>
+              <text x="7" y="66" font-family="'JetBrains Mono'" font-size="10" font-weight="700" fill="#34A853">2</text>
+              <text x="7" y="84" font-family="'JetBrains Mono'" font-size="10" font-weight="700" fill="#9334E6">3</text>
+              <text x="30" y="58" text-anchor="middle" font-family="'Plus Jakarta Sans'" font-size="11" font-weight="800" fill="#000">MUX</text>
+            </g>
+
+            <!-- Select Wire (From MUX down into Pin) -->
+            <path d="M 785 408 L 785 500" stroke="#000" stroke-width="2.5" stroke-linecap="round" fill="none" />
+
+            <!-- Select Input Pin (North-facing arrow) -->
+            <g transform="translate(767, 498)" onclick="cycleOp()" style="cursor: pointer;">
+              <polygon points="18,0 36,14 36,46 0,46 0,14" fill="#FFFFFF" stroke="#000" stroke-width="2.5" stroke-linejoin="round" style="filter: drop-shadow(2px 2px 0px #000);" />
+              <text x="18" y="34" text-anchor="middle" font-family="'JetBrains Mono'" font-size="11" font-weight="700" fill="#1A73E8">x2</text>
+              <text x="18" y="62" text-anchor="middle" font-family="'Plus Jakarta Sans'" font-size="13" font-weight="800" fill="#000">opcode</text>
+              <text id="svgSelectBits" x="18" y="77" text-anchor="middle" font-family="'JetBrains Mono'" font-size="11" font-weight="700" fill="#1A73E8">[00]</text>
+            </g>
+
+            <!-- 6. OUTPUT BUS & ARROW -->
+            <path id="wireOut" d="M 810 376 L 870 376" stroke="#1A73E8" stroke-width="4" stroke-linecap="round" fill="none" class="wire-active" />
+            <g transform="translate(868, 358)">
+              <polygon points="0,0 66,0 80,18 66,36 0,36" fill="#FFFFFF" stroke="#000" stroke-width="2.5" stroke-linejoin="round" style="filter: drop-shadow(3px 3px 0px #000);" />
+              <text id="svgOutX8" x="26" y="23" font-family="'JetBrains Mono'" font-size="13" font-weight="700" fill="#1A73E8">x8</text>
+              <text x="92" y="24" font-family="'Plus Jakarta Sans'" font-size="16" font-weight="800" fill="#000">output</text>
+            </g>
+
+            <!-- Output LED Bits Display -->
+            <g transform="translate(868, 408)">
+              <rect x="0" y="0" width="210" height="44" rx="6" fill="#FFFFFF" stroke="#000" stroke-width="2" style="filter: drop-shadow(3px 3px 0px #000);" />
+              <text x="8" y="16" font-family="'Plus Jakarta Sans'" font-size="10" font-weight="700" fill="#5F6368">Y[7..0]:</text>
+              <g transform="translate(6, 22)">
+                <rect id="led7" x="0" y="0" width="20" height="16" rx="3" fill="#F1F3F4" stroke="#000" stroke-width="1.5" /><text id="led7t" x="10" y="12" text-anchor="middle" font-family="'JetBrains Mono'" font-size="9" font-weight="700" fill="#5F6368">0</text>
+                <rect id="led6" x="24" y="0" width="20" height="16" rx="3" fill="#F1F3F4" stroke="#000" stroke-width="1.5" /><text id="led6t" x="34" y="12" text-anchor="middle" font-family="'JetBrains Mono'" font-size="9" font-weight="700" fill="#5F6368">0</text>
+                <rect id="led5" x="48" y="0" width="20" height="16" rx="3" fill="#F1F3F4" stroke="#000" stroke-width="1.5" /><text id="led5t" x="58" y="12" text-anchor="middle" font-family="'JetBrains Mono'" font-size="9" font-weight="700" fill="#5F6368">0</text>
+                <rect id="led4" x="72" y="0" width="20" height="16" rx="3" fill="#F1F3F4" stroke="#000" stroke-width="1.5" /><text id="led4t" x="82" y="12" text-anchor="middle" font-family="'JetBrains Mono'" font-size="9" font-weight="700" fill="#5F6368">0</text>
+                <rect id="led3" x="96" y="0" width="20" height="16" rx="3" fill="#F1F3F4" stroke="#000" stroke-width="1.5" /><text id="led3t" x="106" y="12" text-anchor="middle" font-family="'JetBrains Mono'" font-size="9" font-weight="700" fill="#5F6368">0</text>
+                <rect id="led2" x="120" y="0" width="20" height="16" rx="3" fill="#F1F3F4" stroke="#000" stroke-width="1.5" /><text id="led2t" x="130" y="12" text-anchor="middle" font-family="'JetBrains Mono'" font-size="9" font-weight="700" fill="#5F6368">0</text>
+                <rect id="led1" x="144" y="0" width="20" height="16" rx="3" fill="#F1F3F4" stroke="#000" stroke-width="1.5" /><text id="led1t" x="154" y="12" text-anchor="middle" font-family="'JetBrains Mono'" font-size="9" font-weight="700" fill="#5F6368">0</text>
+                <rect id="led0" x="168" y="0" width="20" height="16" rx="3" fill="#F1F3F4" stroke="#000" stroke-width="1.5" /><text id="led0t" x="178" y="12" text-anchor="middle" font-family="'JetBrains Mono'" font-size="9" font-weight="700" fill="#5F6368">0</text>
+              </g>
+            </g>
+
+            <!-- Output DEC/HEX Display -->
+            <g transform="translate(868, 462)">
+              <rect id="svgDecBox" x="0" y="0" width="210" height="32" rx="6" fill="#E8F0FE" stroke="#000" stroke-width="2" style="filter: drop-shadow(3px 3px 0px #000);" />
+              <text id="svgDecText" x="105" y="21" text-anchor="middle" font-family="'JetBrains Mono'" font-size="12" font-weight="700" fill="#000">DEC: 0 (0x00)</text>
+            </g>
+
+          </svg>
+        </div>
+      </div>
+
+      <!-- 2. Controls Panel -->
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+
+        <!-- Function Selector -->
+        <div class="card-tactile" style="padding: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+            <h2 style="font-size: 13px; font-weight: 800; text-transform: uppercase;">1. Function Selector (MUX Select [x2])</h2>
+            <span id="selectBitsBadge" style="font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; background: #F1F3F4; padding: 2px 8px; border-radius: 4px; border: 1px solid #000;">
+              S1=0 · S0=0 (00₂)
+            </span>
+          </div>
+          <div class="grid-4">
+            <div class="op-card active" id="opCard0" onclick="setOp(0)" style="background: #E8F0FE;">
+              <div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 14px;">
+                <span>ADD</span>
+                <span style="font-family: 'JetBrains Mono'; font-size: 11px; border: 1px solid #000; padding: 1px 4px; border-radius: 3px; background: #fff;">[00]</span>
+              </div>
+              <div style="font-size: 11px; color: #5F6368; margin-top: 4px;">A + B (Adder)</div>
+              <div style="margin-top: 8px; font-size: 11px; font-weight: 700; border-top: 1px solid #ddd; padding-top: 4px;" id="unitOut0">Out: 00000000 (0)</div>
+            </div>
+            <div class="op-card" id="opCard1" onclick="setOp(1)">
+              <div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 14px;">
+                <span>SUB</span>
+                <span style="font-family: 'JetBrains Mono'; font-size: 11px; border: 1px solid #000; padding: 1px 4px; border-radius: 3px; background: #fff;">[01]</span>
+              </div>
+              <div style="font-size: 11px; color: #5F6368; margin-top: 4px;">A − B (Subtractor)</div>
+              <div style="margin-top: 8px; font-size: 11px; font-weight: 700; border-top: 1px solid #ddd; padding-top: 4px;" id="unitOut1">Out: 00000000 (0)</div>
+            </div>
+            <div class="op-card" id="opCard2" onclick="setOp(2)">
+              <div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 14px;">
+                <span>MUL</span>
+                <span style="font-family: 'JetBrains Mono'; font-size: 11px; border: 1px solid #000; padding: 1px 4px; border-radius: 3px; background: #fff;">[10]</span>
+              </div>
+              <div style="font-size: 11px; color: #5F6368; margin-top: 4px;">A × B (Multiplier)</div>
+              <div style="margin-top: 8px; font-size: 11px; font-weight: 700; border-top: 1px solid #ddd; padding-top: 4px;" id="unitOut2">Out: 00000000 (0)</div>
+            </div>
+            <div class="op-card" id="opCard3" onclick="setOp(3)">
+              <div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 14px;">
+                <span>DIV</span>
+                <span style="font-family: 'JetBrains Mono'; font-size: 11px; border: 1px solid #000; padding: 1px 4px; border-radius: 3px; background: #fff;">[11]</span>
+              </div>
+              <div style="font-size: 11px; color: #5F6368; margin-top: 4px;">A ÷ B (Divider)</div>
+              <div style="margin-top: 8px; font-size: 11px; font-weight: 700; border-top: 1px solid #ddd; padding-top: 4px;" id="unitOut3">Out: 00000000 (0)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dual Input A & B Cards -->
+        <div class="grid-2">
+          <!-- Input A -->
+          <div class="card-tactile" style="padding: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <h3 style="font-size: 13px; font-weight: 800; text-transform: uppercase; color: var(--g-blue);">Input A (8-Bit)</h3>
+              <div>
+                <button onclick="setVal('A', 0)" class="btn-tactile" style="font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; background: #fff;">0</button>
+                <button onclick="setVal('A', 255)" class="btn-tactile" style="font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; background: #fff;">255</button>
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; margin-bottom: 12px;">
+              <div class="bit-btn inactive" id="btnA7" onclick="toggleBit('A', 7)"><span style="font-size: 8px;">A7</span><span style="font-size: 16px; font-family: 'JetBrains Mono';">0</span></div>
+              <div class="bit-btn inactive" id="btnA6" onclick="toggleBit('A', 6)"><span style="font-size: 8px;">A6</span><span style="font-size: 16px; font-family: 'JetBrains Mono';">0</span></div>
+              <div class="bit-btn inactive" id="btnA5" onclick="toggleBit('A', 5)"><span style="font-size: 8px;">A5</span><span style="font-size: 16px; font-family: 'JetBrains Mono';">0</span></div>
+              <div class="bit-btn inactive" id="btnA4" onclick="toggleBit('A', 4)"><span style="font-size: 8px;">A4</span><span style="font-size: 16px; font-family: 'JetBrains Mono';">0</span></div>
+              <div class="bit-btn inactive" id="btnA3" onclick="toggleBit('A', 3)"><span style="font-size: 8px;">A3</span><span style="font-size: 16px; font-family: 'JetBrains Mono';">0</span></div>
+              <div class="bit-btn inactive" id="btnA2" onclick="toggleBit('A', 2)"><span style="font-size: 8px;">A2</span><span style="font-size: 16px; font-family: 'JetBrains Mono';">0</span></div>
+              <div class="bit-btn inactive" id="btnA1" onclick="toggleBit('A', 1)"><span style="font-size: 8px;">A1</span><span style="font-size: 16px; font-family: 'JetBrains Mono';">0</span></div>
+              <div class="bit-btn inactive" id="btnA0" onclick="toggleBit('A', 0)"><span style="font-size: 8px;">A0</span><span style="font-size: 16px; font-family: 'JetBrains Mono';">0</span></div>
+            </div>
+            <!-- Decimal Input Row -->
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; padding: 8px; background: #E8F0FE; border: 2px solid #000; border-radius: 8px;">
+              <label for="decInputA" style="font-size: 11px; font-weight: 800; color: var(--g-blue); text-transform: uppercase; white-space: nowrap;">Decimal:</label>
+              <input type="number" id="decInputA" value="0" oninput="setValFromDec('A', this.value)" onblur="render()" style="flex: 1; font-family: 'JetBrains Mono'; font-weight: 700; font-size: 18px; width: 80px; text-align: center; border: 2px solid #000; border-radius: 6px; padding: 6px 8px; background: #fff; box-shadow: 2px 2px 0px #000;">
+              <span id="decRangeA" style="font-size: 10px; color: #5F6368; font-weight: 600; white-space: nowrap;">0 – 255</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <button onclick="adjustVal('A', -1)" class="btn-tactile" style="width: 28px; height: 28px; border-radius: 4px; font-weight: bold; background: #fff;">−</button>
+              <input type="range" id="sliderA" min="0" max="255" value="0" oninput="setVal('A', Number(this.value))" style="flex: 1; accent-color: var(--g-blue);">
+              <button onclick="adjustVal('A', 1)" class="btn-tactile" style="width: 28px; height: 28px; border-radius: 4px; font-weight: bold; background: #fff;">+</button>
+              <input type="number" id="textValA" value="0" onchange="setValFromDec('A', this.value)" style="font-family: 'JetBrains Mono'; font-weight: bold; font-size: 14px; width: 56px; text-align: right; border: 2px solid #000; border-radius: 4px; padding: 2px 4px;">
+            </div>
+          </div>
+
+          <!-- Input B -->
+          <div class="card-tactile" style="padding: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <h3 style="font-size: 13px; font-weight: 800; text-transform: uppercase; color: var(--g-red);">Input B (8-Bit)</h3>
+              <div>
+                <button onclick="setVal('B', 0)" class="btn-tactile" style="font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; background: #fff;">0</button>
+                <button onclick="setVal('B', 255)" class="btn-tactile" style="font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; background: #fff;">255</button>
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; margin-bottom: 12px;">
+              <div class="bit-btn inactive" id="btnB7" onclick="toggleBit('B', 7)"><span style="font-size: 8px;">B7</span><span style="font-size: 16px; font-family: 'JetBrains Mono';">0</span></div>
+              <div class="bit-btn inactive" id="btnB6" onclick="toggleBit('B', 6)"><span style="font-size: 8px;">B6</span><span style="font-size: 16px; font-family: 'JetBrains Mono';">0</span></div>
+              <div class="bit-btn inactive" id="btnB5" onclick="toggleBit('B', 5)"><span style="font-size: 8px;">B5</span><span style="font-size: 16px; font-family: 'JetBrains Mono';">0</span></div>
+              <div class="bit-btn inactive" id="btnB4" onclick="toggleBit('B', 4)"><span style="font-size: 8px;">B4</span><span style="font-size: 16px; font-family: 'JetBrains Mono';">0</span></div>
+              <div class="bit-btn inactive" id="btnB3" onclick="toggleBit('B', 3)"><span style="font-size: 8px;">B3</span><span style="font-size: 16px; font-family: 'JetBrains Mono';">0</span></div>
+              <div class="bit-btn inactive" id="btnB2" onclick="toggleBit('B', 2)"><span style="font-size: 8px;">B2</span><span style="font-size: 16px; font-family: 'JetBrains Mono';">0</span></div>
+              <div class="bit-btn inactive" id="btnB1" onclick="toggleBit('B', 1)"><span style="font-size: 8px;">B1</span><span style="font-size: 16px; font-family: 'JetBrains Mono';">0</span></div>
+              <div class="bit-btn inactive" id="btnB0" onclick="toggleBit('B', 0)"><span style="font-size: 8px;">B0</span><span style="font-size: 16px; font-family: 'JetBrains Mono';">0</span></div>
+            </div>
+            <!-- Decimal Input Row -->
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; padding: 8px; background: #FCE8E6; border: 2px solid #000; border-radius: 8px;">
+              <label for="decInputB" style="font-size: 11px; font-weight: 800; color: var(--g-red); text-transform: uppercase; white-space: nowrap;">Decimal:</label>
+              <input type="number" id="decInputB" value="0" oninput="setValFromDec('B', this.value)" onblur="render()" style="flex: 1; font-family: 'JetBrains Mono'; font-weight: 700; font-size: 18px; width: 80px; text-align: center; border: 2px solid #000; border-radius: 6px; padding: 6px 8px; background: #fff; box-shadow: 2px 2px 0px #000;">
+              <span id="decRangeB" style="font-size: 10px; color: #5F6368; font-weight: 600; white-space: nowrap;">0 – 255</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <button onclick="adjustVal('B', -1)" class="btn-tactile" style="width: 28px; height: 28px; border-radius: 4px; font-weight: bold; background: #fff;">−</button>
+              <input type="range" id="sliderB" min="0" max="255" value="0" oninput="setVal('B', Number(this.value))" style="flex: 1; accent-color: var(--g-red);">
+              <button onclick="adjustVal('B', 1)" class="btn-tactile" style="width: 28px; height: 28px; border-radius: 4px; font-weight: bold; background: #fff;">+</button>
+              <input type="number" id="textValB" value="0" onchange="setValFromDec('B', this.value)" style="font-family: 'JetBrains Mono'; font-weight: bold; font-size: 14px; width: 56px; text-align: right; border: 2px solid #000; border-radius: 4px; padding: 2px 4px;">
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Output Cockpit & Status Flags -->
+        <div class="card-tactile" style="padding: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+            <h3 style="font-size: 13px; font-weight: 800; text-transform: uppercase;">ALU Output Register & Probes</h3>
+            <span id="equationBadge" style="font-family: 'JetBrains Mono'; font-weight: bold; font-size: 12px; background: #E8F0FE; color: #1A73E8; padding: 2px 8px; border-radius: 4px; border: 1px solid #000;">
+              0 + 0 = 0 (00000000₂)
+            </span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px;">
+            <div style="background: #F8F9FA; border: 2px solid #000; border-radius: 8px; padding: 12px;">
+              <div style="font-size: 11px; font-weight: bold; color: #5F6368; margin-bottom: 6px;">OUTPUT Y [x8] BUS:</div>
+              <div style="display: flex; gap: 4px;" id="outputLedContainer">
+                <!-- Rendered via JS -->
+              </div>
+              <div style="margin-top: 10px; font-size: 12px; font-family: 'JetBrains Mono'; font-weight: bold;" id="outputDetailText">
+                DEC: 0 · HEX: 0x00 · SIGNED: 0
+              </div>
+              <div style="margin-top: 4px; font-size: 11px; font-family: 'JetBrains Mono'; color: #5F6368;" id="outputExtraText"></div>
+            </div>
+
+            <div style="background: #F8F9FA; border: 2px solid #000; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 6px; font-size: 11px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span>Cout (Carry):</span>
+                <span id="flagCout" style="font-family: 'JetBrains Mono'; font-weight: bold; background: #fff; padding: 1px 6px; border: 1px solid #000; border-radius: 3px;">0</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span>Borrow Out:</span>
+                <span id="flagBorrow" style="font-family: 'JetBrains Mono'; font-weight: bold; background: #fff; padding: 1px 6px; border: 1px solid #000; border-radius: 3px;">0</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span>Overflow:</span>
+                <span id="flagOverflow" style="font-family: 'JetBrains Mono'; font-weight: bold; background: #fff; padding: 1px 6px; border: 1px solid #000; border-radius: 3px;">0</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span>Zero (Z):</span>
+                <span id="flagZero" style="font-family: 'JetBrains Mono'; font-weight: bold; background: #fff; padding: 1px 6px; border: 1px solid #000; border-radius: 3px;">1 (ZERO)</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center;" id="remRow" >
+                <span>Remainder:</span>
+                <span id="flagRem" style="font-family: 'JetBrains Mono'; font-weight: bold; background: #fff; padding: 1px 6px; border: 1px solid #000; border-radius: 3px;">—</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Presets -->
+        <div class="card-tactile" style="padding: 16px;">
+          <h3 style="font-size: 13px; font-weight: 800; text-transform: uppercase; margin-bottom: 10px;">Quick Test Presets</h3>
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px;">
+            <button onclick="applyPreset(200, 100, 0)" class="btn-tactile" style="padding: 8px 10px; font-size: 11px; text-align: left; background: #fff; border-radius: 6px;">
+              <strong>Carry Overflow</strong><br><span style="color: #5F6368;">200 + 100 = 300 (cout=1)</span>
+            </button>
+            <button onclick="applyPreset(15, 25, 0)" class="btn-tactile" style="padding: 8px 10px; font-size: 11px; text-align: left; background: #fff; border-radius: 6px;">
+              <strong>Basic Add</strong><br><span style="color: #5F6368;">15 + 25 = 40</span>
+            </button>
+            <button onclick="applyPreset(10, 30, 1)" class="btn-tactile" style="padding: 8px 10px; font-size: 11px; text-align: left; background: #fff; border-radius: 6px;">
+              <strong>Borrow Test</strong><br><span style="color: #5F6368;">10 − 30 (borrow=1)</span>
+            </button>
+            <button onclick="applyPreset(200, 50, 1)" class="btn-tactile" style="padding: 8px 10px; font-size: 11px; text-align: left; background: #fff; border-radius: 6px;">
+              <strong>Clean Sub</strong><br><span style="color: #5F6368;">200 − 50 = 150</span>
+            </button>
+            <button onclick="applyPreset(12, 13, 2)" class="btn-tactile" style="padding: 8px 10px; font-size: 11px; text-align: left; background: #fff; border-radius: 6px;">
+              <strong>Multiply</strong><br><span style="color: #5F6368;">12 × 13 = 156</span>
+            </button>
+            <button onclick="applyPreset(255, 16, 3)" class="btn-tactile" style="padding: 8px 10px; font-size: 11px; text-align: left; background: #fff; border-radius: 6px;">
+              <strong>Divide</strong><br><span style="color: #5F6368;">255 ÷ 16 = 15 R 15</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════ DIAGRAM TAB ═══════ -->
+    <div id="tab-diagram" class="tab-pane">
+      <div class="card-tactile" style="padding: 16px;">
+        <h2 style="font-size: 14px; font-weight: 800; text-transform: uppercase; margin-bottom: 12px;">Original Logic Diagram (Provided)</h2>
+        <div style="text-align: center;">
+          <img src="alu_diagram.png" alt="8-Bit ALU Logic Diagram" style="width: 100%; max-width: 1000px; border-radius: 8px; border: 2px solid #000;">
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════ REFERENCE TAB ═══════ -->
+    <div id="tab-ref" class="tab-pane">
+      <div class="card-tactile" style="padding: 20px;">
+        <h2 style="font-size: 14px; font-weight: 800; text-transform: uppercase; margin-bottom: 12px;">Architecture Overview</h2>
+        <p style="color: #3C4043; line-height: 1.7; font-size: 13px;">
+          This 8-bit ALU takes two 8-bit operands <strong style="color: var(--g-blue);">A</strong> and
+          <strong style="color: var(--g-red);">B</strong>, computes four arithmetic operations in parallel,
+          and uses a <strong>4-to-1 MUX</strong> controlled by a 2-bit <strong style="color: var(--g-blue);">opcode</strong>
+          to select which result appears at the <strong style="color: var(--g-green);">output</strong>.
+        </p>
+      </div>
+      <div class="card-tactile" style="padding: 20px; margin-top: 16px;">
+        <h2 style="font-size: 14px; font-weight: 800; text-transform: uppercase; margin-bottom: 12px;">Opcode Truth Table</h2>
+        <table style="width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; font-size: 12px;">
+          <thead>
+            <tr style="background: #F8F9FA; border-bottom: 2px solid #000;">
+              <th style="padding: 8px; text-align: center; font-weight: 800;">Opcode</th>
+              <th style="padding: 8px; text-align: center; font-weight: 800;">Binary</th>
+              <th style="padding: 8px; text-align: center; font-weight: 800;">Operation</th>
+              <th style="padding: 8px; text-align: center; font-weight: 800;">Extra Outputs</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom: 1px solid #ddd;"><td style="padding: 8px; text-align: center;">0</td><td style="padding: 8px; text-align: center;">00</td><td style="padding: 8px; text-align: center; color: var(--g-blue); font-weight: 700;">A + B (ADD)</td><td style="padding: 8px; text-align: center;">Carry Out</td></tr>
+            <tr style="border-bottom: 1px solid #ddd;"><td style="padding: 8px; text-align: center;">1</td><td style="padding: 8px; text-align: center;">01</td><td style="padding: 8px; text-align: center; color: #F9AB00; font-weight: 700;">A − B (SUB)</td><td style="padding: 8px; text-align: center;">Borrow Out</td></tr>
+            <tr style="border-bottom: 1px solid #ddd;"><td style="padding: 8px; text-align: center;">2</td><td style="padding: 8px; text-align: center;">10</td><td style="padding: 8px; text-align: center; color: var(--g-green); font-weight: 700;">A × B (MUL)</td><td style="padding: 8px; text-align: center;">Upper 8 bits</td></tr>
+            <tr><td style="padding: 8px; text-align: center;">3</td><td style="padding: 8px; text-align: center;">11</td><td style="padding: 8px; text-align: center; color: var(--g-purple); font-weight: 700;">A ÷ B (DIV)</td><td style="padding: 8px; text-align: center;">Remainder</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card-tactile" style="padding: 20px; margin-top: 16px;">
+        <h2 style="font-size: 14px; font-weight: 800; text-transform: uppercase; margin-bottom: 12px;">Number Representation</h2>
+        <table style="width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; font-size: 12px;">
+          <thead>
+            <tr style="background: #F8F9FA; border-bottom: 2px solid #000;">
+              <th style="padding: 8px; text-align: center; font-weight: 800;">Mode</th>
+              <th style="padding: 8px; text-align: center; font-weight: 800;">Range</th>
+              <th style="padding: 8px; text-align: center; font-weight: 800;">MSB Meaning</th>
+              <th style="padding: 8px; text-align: center; font-weight: 800;">11111111₂</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom: 1px solid #ddd;"><td style="padding: 8px; text-align: center;">Unsigned</td><td style="padding: 8px; text-align: center;">0 – 255</td><td style="padding: 8px; text-align: center;">128's place</td><td style="padding: 8px; text-align: center;">= 255</td></tr>
+            <tr><td style="padding: 8px; text-align: center;">Signed (2's Comp)</td><td style="padding: 8px; text-align: center;">−128 – 127</td><td style="padding: 8px; text-align: center;">Sign bit</td><td style="padding: 8px; text-align: center;">= −1</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <footer style="background: #fff; border-top: 2px solid #000; padding: 12px 20px; font-size: 11px; color: #5F6368; text-align: center; margin-top: 20px;">
+    Project: Design and Simulation of an 8-Bit ALU · Self-Contained Offline Simulation File
+  </footer>
+
+  <script>
+    // ═══ State ═══
+    let valA = 0;
+    let valB = 0;
+    let selectOp = 0; // 0: ADD, 1: SUB, 2: MUL, 3: DIV
+    let isSigned = false;
+
+    const OP_INFO = [
+      { name: "ADD", symbol: "+", code: "00", color: "#1A73E8", bg: "#E8F0FE" },
+      { name: "SUB", symbol: "−", code: "01", color: "#F9AB00", bg: "#FEF7E0" },
+      { name: "MUL", symbol: "×", code: "10", color: "#34A853", bg: "#E6F4EA" },
+      { name: "DIV", symbol: "÷", code: "11", color: "#9334E6", bg: "#F3E8FD" }
+    ];
+
+    function bin8(v) { return (v & 0xFF).toString(2).padStart(8, '0'); }
+    function hex8(v) { return '0x' + (v & 0xFF).toString(16).toUpperCase().padStart(2, '0'); }
+    function toSigned8(v) { return (v & 0x80) ? v - 256 : v; }
+    function toBits8(val) {
+      let bits = [];
+      for (let i = 7; i >= 0; i--) bits.push((val >> i) & 1);
+      return bits;
+    }
+
+    function compute() {
+      // ADDER
+      const fullSum = valA + valB;
+      const addOut = fullSum & 0xFF;
+      const cout = fullSum > 255 ? 1 : 0;
+
+      // SUBTRACTOR
+      const subOut = ((valA - valB) % 256 + 256) % 256;
+      const borrow = valA < valB ? 1 : 0;
+
+      // MULTIPLIER
+      const mulFull = valA * valB;
+      const mulOut = mulFull & 0xFF;
+      const mulUpper = (mulFull >> 8) & 0xFF;
+
+      // DIVIDER
+      let divOut = 0, divRem = 0, divByZero = false;
+      if (valB === 0) { divByZero = true; divOut = 0xFF; divRem = 0; }
+      else { divOut = Math.floor(valA / valB) & 0xFF; divRem = (valA % valB) & 0xFF; }
+
+      // MUX
+      let outVal = [addOut, subOut, mulOut, divOut][selectOp];
+
+      return { valA, valB, selectOp, addOut, cout, subOut, borrow, mulOut, mulUpper, mulFull, divOut, divRem, divByZero, outVal };
+    }
+
+    function render() {
+      const s = compute();
+      const op = OP_INFO[s.selectOp];
+      const outBits = toBits8(s.outVal);
+      const isZero = s.outVal === 0;
+
+      // Header
+      document.getElementById('headerOpDot').style.background = op.color;
+      document.getElementById('headerRoutingText').textContent = `Routing: ${op.name} (${op.code}₂)`;
+
+      // SVG Input A & B text
+      const aDisp = isSigned ? toSigned8(s.valA) : s.valA;
+      const bDisp = isSigned ? toSigned8(s.valB) : s.valB;
+      document.getElementById('svgValAText').textContent = `=${aDisp}`;
+      document.getElementById('svgValBText').textContent = `=${bDisp}`;
+
+      // SVG A & B bit switches
+      for (let i = 0; i < 8; i++) {
+        const bitA = (s.valA >> i) & 1;
+        document.getElementById(`svgA${i}`).setAttribute('fill', bitA ? '#1A73E8' : '#F1F3F4');
+        document.getElementById(`svgA${i}t`).setAttribute('fill', bitA ? '#fff' : '#000');
+        document.getElementById(`svgA${i}t`).textContent = bitA;
+
+        const bitB = (s.valB >> i) & 1;
+        document.getElementById(`svgB${i}`).setAttribute('fill', bitB ? '#EA4335' : '#F1F3F4');
+        document.getElementById(`svgB${i}t`).setAttribute('fill', bitB ? '#fff' : '#000');
+        document.getElementById(`svgB${i}t`).textContent = bitB;
+      }
+
+      // Control bit buttons A
+      for (let i = 0; i < 8; i++) {
+        const bitVal = (s.valA >> i) & 1;
+        const btn = document.getElementById(`btnA${i}`);
+        btn.className = `bit-btn ${bitVal ? 'active-blue' : 'inactive'}`;
+        btn.querySelector('span:last-child').textContent = bitVal;
+      }
+      document.getElementById('sliderA').value = s.valA;
+      document.getElementById('textValA').value = aDisp;
+      const decInA = document.getElementById('decInputA');
+      if (document.activeElement !== decInA) decInA.value = aDisp;
+      document.getElementById('decRangeA').textContent = isSigned ? '−128 – 127' : '0 – 255';
+
+      // Control bit buttons B
+      for (let i = 0; i < 8; i++) {
+        const bitVal = (s.valB >> i) & 1;
+        const btn = document.getElementById(`btnB${i}`);
+        btn.className = `bit-btn ${bitVal ? 'active-red' : 'inactive'}`;
+        btn.querySelector('span:last-child').textContent = bitVal;
+      }
+      document.getElementById('sliderB').value = s.valB;
+      document.getElementById('textValB').value = bDisp;
+      const decInB = document.getElementById('decInputB');
+      if (document.activeElement !== decInB) decInB.value = bDisp;
+      document.getElementById('decRangeB').textContent = isSigned ? '−128 – 127' : '0 – 255';
+
+      // SVG Unit Output Tags
+      document.getElementById('adderOutTag').textContent = `${bin8(s.addOut)} (${isSigned ? toSigned8(s.addOut) : s.addOut})`;
+      document.getElementById('subOutTag').textContent = `${bin8(s.subOut)} (${isSigned ? toSigned8(s.subOut) : s.subOut})`;
+      document.getElementById('mulOutTag').textContent = `${bin8(s.mulOut)} (${isSigned ? toSigned8(s.mulOut) : s.mulOut})`;
+      document.getElementById('divOutTag').textContent = s.divByZero ? `UNDEFINED` : `${bin8(s.divOut)} (${isSigned ? toSigned8(s.divOut) : s.divOut})`;
+
+      // Probes
+      document.getElementById('coutProbeVal').textContent = s.cout;
+      document.getElementById('coutProbeCircle').setAttribute('fill', s.cout ? '#FBBC04' : '#fff');
+      document.getElementById('coutBadgeGroup').style.display = s.cout ? 'block' : 'none';
+
+      document.getElementById('borrowProbeVal').textContent = s.borrow;
+      document.getElementById('borrowProbeCircle').setAttribute('fill', s.borrow ? '#FBBC04' : '#fff');
+      document.getElementById('borrowBadgeGroup').style.display = s.borrow ? 'block' : 'none';
+
+      // SVG Active Wire Colors
+      const wires = [
+        document.getElementById('wireAdd'),
+        document.getElementById('wireSub'),
+        document.getElementById('wireMul'),
+        document.getElementById('wireDiv')
+      ];
+      wires.forEach((w, idx) => {
+        if (idx === s.selectOp) {
+          w.setAttribute('stroke', op.color);
+          w.setAttribute('stroke-width', '4');
+          w.setAttribute('class', 'wire-active');
+        } else {
+          w.setAttribute('stroke', '#000');
+          w.setAttribute('stroke-width', '2.5');
+          w.removeAttribute('class');
+        }
+      });
+
+      // SVG Select pin
+      document.getElementById('svgSelectBits').textContent = `[${op.code}]`;
+      document.getElementById('svgSelectBits').setAttribute('fill', op.color);
+
+      // SVG Output wire & arrow
+      document.getElementById('wireOut').setAttribute('stroke', op.color);
+      document.getElementById('svgOutX8').setAttribute('fill', op.color);
+
+      // SVG Output LEDs
+      for (let i = 0; i < 8; i++) {
+        const bitVal = outBits[7 - i]; // outBits is MSB-first
+        document.getElementById(`led${i}`).setAttribute('fill', bitVal ? op.color : '#F1F3F4');
+        document.getElementById(`led${i}t`).setAttribute('fill', bitVal ? '#fff' : '#5F6368');
+        document.getElementById(`led${i}t`).textContent = bitVal;
+      }
+
+      // SVG Output DEC box
+      document.getElementById('svgDecBox').setAttribute('fill', op.bg);
+      const outDisp = isSigned ? toSigned8(s.outVal) : s.outVal;
+      document.getElementById('svgDecText').textContent = `DEC: ${outDisp} (${hex8(s.outVal)})`;
+
+      // SVG Remainder
+      document.getElementById('svgRem').textContent = s.selectOp === 3 && !s.divByZero ? bin8(s.divRem) : '--------';
+
+      // Controls Op Cards
+      for (let i = 0; i < 4; i++) {
+        const card = document.getElementById(`opCard${i}`);
+        card.className = i === s.selectOp ? 'op-card active' : 'op-card';
+        card.style.background = i === s.selectOp ? OP_INFO[i].bg : '#fff';
+      }
+      document.getElementById('unitOut0').textContent = `Out: ${bin8(s.addOut)} (${isSigned ? toSigned8(s.addOut) : s.addOut})`;
+      document.getElementById('unitOut1').textContent = `Out: ${bin8(s.subOut)} (${isSigned ? toSigned8(s.subOut) : s.subOut})`;
+      document.getElementById('unitOut2').textContent = `Out: ${bin8(s.mulOut)} (${isSigned ? toSigned8(s.mulOut) : s.mulOut})`;
+      document.getElementById('unitOut3').textContent = s.divByZero ? 'Out: UNDEFINED (÷0)' : `Out: ${bin8(s.divOut)} (${isSigned ? toSigned8(s.divOut) : s.divOut})`;
+      document.getElementById('selectBitsBadge').textContent = `S1=${(s.selectOp >> 1) & 1} · S0=${s.selectOp & 1} (${op.code}₂)`;
+
+      // Cockpit Equation
+      const eqDisp = s.selectOp === 3 && s.divByZero ? 'UNDEF' : outDisp;
+      document.getElementById('equationBadge').textContent = `${aDisp} ${op.symbol} ${bDisp} = ${eqDisp} (${bin8(s.outVal)}₂)`;
+      document.getElementById('equationBadge').style.color = op.color;
+      document.getElementById('equationBadge').style.background = op.bg;
+
+      // Cockpit LEDs
+      const ledHtml = outBits.map((b, idx) => `
+        <div style="flex: 1; padding: 4px; text-align: center; border: 2px solid #000; border-radius: 6px; background: ${b ? '#202124' : '#fff'}; color: ${b ? op.color : '#202124'};">
+          <div style="font-size: 8px; opacity: 0.7;">Y${7 - idx}</div>
+          <div style="font-size: 16px; font-family: 'JetBrains Mono'; font-weight: 800;">${b}</div>
+        </div>
+      `).join('');
+      document.getElementById('outputLedContainer').innerHTML = ledHtml;
+
+      const signed2s = toSigned8(s.outVal);
+      document.getElementById('outputDetailText').textContent = `DEC: ${s.outVal} · HEX: ${hex8(s.outVal)} · SIGNED 2'S: ${signed2s}`;
+
+      // Extra info line
+      let extraText = '';
+      if (s.selectOp === 2) extraText = `Full 16-bit product: ${s.mulFull} (upper 8: ${bin8(s.mulUpper)} = ${s.mulUpper})`;
+      if (s.selectOp === 3 && !s.divByZero) extraText = `Quotient: ${s.divOut} · Remainder: ${s.divRem} (${bin8(s.divRem)})`;
+      if (s.selectOp === 3 && s.divByZero) extraText = `⚠ Division by zero — result undefined`;
+      document.getElementById('outputExtraText').textContent = extraText;
+
+      // Flags
+      document.getElementById('flagCout').textContent = s.cout ? '1 (CARRY)' : '0';
+      document.getElementById('flagCout').style.background = s.cout ? '#FEF7E0' : '#fff';
+      document.getElementById('flagCout').style.color = s.cout ? '#B06000' : '#202124';
+
+      document.getElementById('flagBorrow').textContent = s.borrow ? '1 (BORROW)' : '0';
+      document.getElementById('flagBorrow').style.background = s.borrow ? '#FEF7E0' : '#fff';
+      document.getElementById('flagBorrow').style.color = s.borrow ? '#B06000' : '#202124';
+
+      let overflow = 0;
+      if (s.selectOp === 0) overflow = ((~(s.valA ^ s.valB)) & (s.valA ^ s.addOut) & 0x80) ? 1 : 0;
+      if (s.selectOp === 1) overflow = (((s.valA ^ s.valB)) & (s.valA ^ s.subOut) & 0x80) ? 1 : 0;
+      document.getElementById('flagOverflow').textContent = overflow ? '1 (OVF)' : '0';
+      document.getElementById('flagOverflow').style.background = overflow ? '#FCE8E6' : '#fff';
+      document.getElementById('flagOverflow').style.color = overflow ? '#EA4335' : '#202124';
+
+      document.getElementById('flagZero').textContent = isZero ? '1 (ZERO)' : '0';
+      document.getElementById('flagZero').style.color = isZero ? '#34A853' : '#202124';
+
+      document.getElementById('flagRem').textContent = (s.selectOp === 3 && !s.divByZero) ? `${s.divRem}` : '—';
+
+      // Active boxes
+      const boxes = ['adderBox', 'subBox', 'mulBox', 'divBox'];
+      const boxBgs = ['#E8F0FE', '#FEF7E0', '#E6F4EA', '#F3E8FD'];
+      boxes.forEach((id, i) => {
+        document.getElementById(id).setAttribute('fill', i === s.selectOp ? boxBgs[i] : '#FFFFFF');
+      });
+    }
+
+    // ═══ Handlers ═══
+    function setOp(op) { selectOp = op; render(); }
+    function cycleOp() { selectOp = (selectOp + 1) % 4; render(); }
+
+    function setVal(which, val) {
+      val = Math.max(0, Math.min(255, Math.round(val)));
+      if (which === 'A') valA = val;
+      if (which === 'B') valB = val;
+      render();
+    }
+    function setValFromDec(which, str) {
+      let val = parseInt(str);
+      if (isNaN(val)) return;
+      if (isSigned) {
+        // Signed mode: accept -128 to 127, convert to unsigned 0-255
+        val = Math.max(-128, Math.min(127, val));
+        if (val < 0) val = (val + 256) & 0xFF;
+      } else {
+        val = Math.max(0, Math.min(255, val));
+      }
+      if (which === 'A') valA = val;
+      if (which === 'B') valB = val;
+      render();
+    }
+    function adjustVal(which, delta) {
+      if (which === 'A') setVal('A', valA + delta);
+      if (which === 'B') setVal('B', valB + delta);
+    }
+    function toggleBit(which, bitIndex) {
+      const mask = 1 << bitIndex;
+      if (which === 'A') valA ^= mask;
+      if (which === 'B') valB ^= mask;
+      render();
+    }
+    function applyPreset(a, b, op) {
+      valA = a; valB = b; selectOp = op;
+      render();
+    }
+    function resetDefaults() {
+      valA = 0; valB = 0; selectOp = 0; isSigned = false;
+      document.getElementById('modeUnsigned').classList.add('active-mode');
+      document.getElementById('modeSigned').classList.remove('active-mode');
+      render();
+    }
+    function setMode(signed) {
+      isSigned = signed;
+      document.getElementById('modeUnsigned').classList.toggle('active-mode', !signed);
+      document.getElementById('modeSigned').classList.toggle('active-mode', signed);
+      if (signed) {
+        document.getElementById('sliderA').min = 0;
+        document.getElementById('sliderA').max = 255;
+        document.getElementById('sliderB').min = 0;
+        document.getElementById('sliderB').max = 255;
+      }
+      render();
+    }
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-pane').forEach(p => { p.classList.remove('active'); p.style.display = 'none'; });
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('tab-' + tab).classList.add('active');
+      document.getElementById('tab-' + tab).style.display = tab === 'sim' ? 'flex' : 'block';
+      event.target.classList.add('active');
+    }
+
+    // Initial render
+    render();
+  </script>
+</body>
+</html>
